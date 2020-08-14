@@ -38,7 +38,7 @@ public class ContractView extends UI {
 
     private Button report = new DownloadButton();
 
-    @Value("${directory}")
+    @Value("${directory.contract}")
     private String Path;
 
     @Override

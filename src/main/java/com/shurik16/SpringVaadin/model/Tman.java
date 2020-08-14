@@ -30,23 +30,32 @@ public class Tman implements Serializable {
     // @NotNull
 
     @ManyToOne//(optional = false/*,fetch = FetchType.LAZY*/, cascade = CascadeType.ALL)
-    @JoinColumn(name = "standing")
+    @JoinColumn(name = "id_standing")
     private Tstanding standing;
 
     @ManyToOne//(optional = false/*,fetch = FetchType.LAZY*/, cascade = CascadeType.ALL)
-    @JoinColumn(name = "otdel")
+    @JoinColumn(name = "id_otdel")
     private Totdel otdel;
 
     @ManyToOne//(optional = false/*,fetch = FetchType.LAZY*/, cascade = CascadeType.ALL)
-    @JoinColumn(name = "posit")
+    @JoinColumn(name = "id_posit")
     private Tposit posit;
 
     @ManyToOne//(optional = false/*,fetch = FetchType.LAZY*/, cascade = CascadeType.ALL)
-    @JoinColumn(name = "company")
+    @JoinColumn(name = "id_company")
     private Tcompany company;
 
+    private int id_foto;
 
     public Tman() {
+    }
+
+    public int getId_foto() {
+        return id_foto;
+    }
+
+    public void setId_foto(int idfoto) {
+        this.id_foto = idfoto;
     }
 
     public Tposit getPosit() {

@@ -84,11 +84,10 @@ public class AdminUI extends UI {
 
     private Button report = new DownloadButton();
 
-
-    //private Image image;
-
     @Override
     protected void init(VaadinRequest request) {
+        form.setEnabled(false);
+        report.setEnabled(false);
         UI.getCurrent().setPollInterval(500);
         list.setRows(repo.findAll());
 

@@ -5,9 +5,7 @@ import com.shurik16.SpringVaadin.service.*;
 import com.vaadin.annotations.Theme;
 import com.vaadin.data.Binder;
 import com.vaadin.icons.VaadinIcons;
-import com.vaadin.server.FileResource;
-import com.vaadin.server.Page;
-import com.vaadin.server.VaadinRequest;
+import com.vaadin.server.*;
 import com.vaadin.shared.ui.ContentMode;
 import com.vaadin.shared.ui.datefield.DateTimeResolution;
 import com.vaadin.spring.annotation.SpringUI;
@@ -17,7 +15,10 @@ import com.vaadin.ui.renderers.HtmlRenderer;
 import com.vaadin.ui.themes.ValoTheme;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Whitelist;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.vaadin.viritin.button.ConfirmButton;
 import org.vaadin.viritin.button.MButton;
@@ -25,6 +26,8 @@ import org.vaadin.viritin.grid.MGrid;
 import org.vaadin.viritin.layouts.MVerticalLayout;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -33,6 +36,8 @@ import java.util.List;
 @Theme("valo")
 @SpringUI(path = "/man")
 public class ManView extends UI {
+
+    private static Logger LOG = LoggerFactory.getLogger(ManView.class);
 
     private Tman tman;
 
@@ -57,6 +62,15 @@ public class ManView extends UI {
     @Autowired
     TtestRepository ttestRepository;
 
+    @Autowired
+    TfotoRepository tfotoRepository;
+
+    @Value("${directory.dosie}")
+    private String pathDosie;
+
+    @Value("${directory.foto}")
+    private String pathFotos;
+
     public void setTman(Tman tman) {
         this.tman = tman;
     }
@@ -78,6 +92,7 @@ public class ManView extends UI {
     private ComboBox<Totdel> otdel = new ComboBox<Totdel>("Отдел");
     private ComboBox<Tstanding> status = new ComboBox<Tstanding>("Статус");
     private ComboBox<Tposit> tposit = new ComboBox<Tposit>("Должность");
+    private int idfoto;
     private Label label = new Label("АНКЕТА", ContentMode.HTML);//"<h2  style=\"text-align: center;\">Анкета</h2>");
     private Label ifoDir = new Label("Не определено");
     private TabSheet tabSheet = new TabSheet();
@@ -87,6 +102,7 @@ public class ManView extends UI {
     private Button hisstatus = new MButton("История");
     private Button files = new MButton("Открыть папку работника");
     private Button setFoto = new MButton("Установить фото");
+    private Button uplodFoto = new MButton("Загрузить фото");
     private Button deleteTest = new ConfirmButton(VaadinIcons.TRASH, "Удалить",
             "Удалить выбранную запись?", this::removeTest);
     private Button addTest = new Button("Добавить проверку");
@@ -99,15 +115,23 @@ public class ManView extends UI {
     private MGrid<Ttest> gridTest = new MGrid<>(Ttest.class).withProperties("data_test", "result")
             .withColumnHeaders("Дата проверки", "Результат")
             .withFullWidth();
-    private File rootFileFofo = new File("\\\\nasprudteo\\Share\\УК ДВ-Альянс\\СЭБ\\СЭБ\\СКУД\\Фото\\");
+
+    private File rootFileFofo;
+
     private SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy");
     private boolean isNew;
     private Binder<Tman> binder;
 
     @Override
     protected void init(VaadinRequest request) {
+        //if(tman.getTfoto())
+        //LOG.error("tman-"+String.valueOf(tman.getIdfoto()));
+        LOG.error("Путь к файлу:"+pathFotos);
+        LOG.error(System.getProperty("user.dir")+"/src/main/resources/hase.jpg");
 
         if (Long.parseLong(request.getParameter("id")) == 0) isNew = true;
+
+            rootFileFofo = new File(pathFotos);
 
         otdel.setItems(totdelRepository.findAll());
         tposit.setItems(tpositRepository.findAll());
@@ -190,10 +214,12 @@ public class ManView extends UI {
         else
             binder.setBean(new Tman());
 
-        String path = "nasprudteo\\Share\\УК ДВ-Альянс\\СЭБ\\СЭБ\\КАДРЫ\\1.ПРОВЕРКА КАНДИДАТОВ\\АНКЕТЫ\\"
-                + binder.getBean().getFirstname() + " " + binder.getBean().getLastname() + " " + binder.getBean().getMiddlename();
+        //String path = "nasprudteo\\Share\\УК ДВ-Альянс\\СЭБ\\СЭБ\\КАДРЫ\\1.ПРОВЕРКА КАНДИДАТОВ\\АНКЕТЫ\\"
 
-        File rootFileDoc = new File("\\\\" + path);
+
+        pathDosie = pathDosie +"\\"+ binder.getBean().getFirstname() + " " + binder.getBean().getLastname() + " " + binder.getBean().getMiddlename();
+
+        File rootFileDoc = new File(pathDosie);
 
         treeGridFoto.setHeight(200, Unit.PIXELS);
         tabSheet.setHeight(100.0f, Unit.PERCENTAGE);
@@ -251,6 +277,33 @@ public class ManView extends UI {
             }
         });
 
+        uplodFoto.addClickListener(event -> {
+
+            if (pathFoto.getValue().length()>0) {
+                Tfoto tfoto;
+                File file =new File(pathFoto.getValue());
+                byte[]bFile = new byte[(int) file.length()];
+                try {
+                    FileInputStream fileInputStream = new FileInputStream(file);
+                    //convert file into array of bytes
+                    fileInputStream.read(bFile);
+                    fileInputStream.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                tfoto = (tman.getId_foto() > 0)?tfotoRepository.findById(tman.getId_foto()):new Tfoto();
+
+                tfoto.setFoto(bFile);
+                tfoto = tfotoRepository.save(tfoto);
+
+                tman.setId_foto(tfoto.getId());
+                //LOG.error("tfoto-"+String.valueOf(tfoto.getId()));
+                // LOG.error("tman-"+String.valueOf(tman.getTfoto().getId()));
+
+                }
+
+        });
 
         gridTest.asSingleSelect().addValueChangeListener(event -> {
             if (!gridTest.getSelectedItems().isEmpty()) {
@@ -304,7 +357,7 @@ public class ManView extends UI {
 
         creatDir.addClickListener(event -> {
             if (binder.isValid()) {
-                File fileDir = new File("\\\\" + path);
+                File fileDir = new File(pathDosie);
                 if (!fileDir.exists()) {
                     if (fileDir.mkdir()) {
                         Notification.show("Папка создана!");
@@ -324,11 +377,11 @@ public class ManView extends UI {
             openHistoryStatus(Math.toIntExact(tman.getId()));
         });
 
-        File fileFoto = new File("\\\\nasprudteo\\Share\\УК ДВ-Альянс\\СЭБ\\СЭБ\\СКУД\\Фото\\hase.jpg");
+        File fileFoto = new File(System.getProperty("user.dir")+"/src/main/resources/hase.jpg");
 
         if (!isNew) {
 
-            File fileDir = new File("\\\\" + path);
+            File fileDir = new File(pathDosie);
 
             if (fileDir.exists()) {
                 files.setEnabled(true);
@@ -345,7 +398,7 @@ public class ManView extends UI {
                 fileFoto = fileFotoMan;
 
             files.addClickListener(event -> {
-                Page.getCurrent().open("file://///" + path, null);
+                Page.getCurrent().open("file:" + pathDosie, null);
             });
 
 
@@ -381,6 +434,13 @@ public class ManView extends UI {
             pathFoto.setValue(fileFoto.getAbsolutePath());
         }
 
+        if(tman.getId_foto()>0) {
+            LOG.error(String.valueOf(tman.getId_foto()));
+
+            byte[] imageBytes = tfotoRepository.findById(tman.getId_foto()).getFoto();
+            File fileFotos = convertUsingOutputStream(imageBytes);
+                  foto = new Image("", new FileResource(fileFotos));
+        } else
         foto = new Image("",
                 new FileResource(fileFoto));
 
@@ -409,7 +469,7 @@ public class ManView extends UI {
         layoutFile.addComponents(
                 new HorizontalLayout(ifoDir, files, creatDir),
                 treeGrid);
-        layoutFofo.addComponents(pathFoto, setFoto, treeGridFoto);
+        layoutFofo.addComponents(pathFoto, setFoto, uplodFoto, treeGridFoto);
 
         layoutTest.addComponents(new HorizontalLayout(addTest, editTest, deleteTest),
                 gridTest,
@@ -434,6 +494,18 @@ public class ManView extends UI {
         );
 
         setContent(verticalLayout);
+    }
+    public static File convertUsingOutputStream(byte[] fileBytes)
+    {
+        File f = new File("image.jpg");
+        try (FileOutputStream fos = new FileOutputStream(f)) {
+            fos.write(fileBytes);
+        }
+        catch(Exception ex)
+        {
+            ex.printStackTrace();
+        }
+        return f;
     }
 
     private void udateTestGrid() {
